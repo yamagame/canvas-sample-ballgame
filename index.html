@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Canvas Sample BallGame</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      canvas {
+        background: #eee;
+        display: block;
+        margin: 0 auto;
+      }
+      .gameCanvas {
+        margin: 60px;
+      }
+      .numberText {
+        margin: 60px;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        z-index: 10;
+        font-size: 1.5em;
+        font-weight: bold;
+        font-family: "Courier New", Courier, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <canvas class="gameCanvas" id="myCanvas" width="480" height="640">
+      </canvas>
+      <div class="numberText">
+        <div><span>SCORE:</span><span id="scoreNumber">10</span></div>
+        <div><span>LIFE:</span><span id="lifeNumber">10</span></div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("myCanvas");
+      const lifeNumber = document.getElementById("lifeNumber");
+      const scoreNumber = document.getElementById("scoreNumber");
+      const ctx = canvas.getContext("2d");
+
+      const balls = [];
+      const colors = ["green", "blue", "red", "yellow"];
+      const maxLife = 30;
+
+      let score = 0;
+
+      function getRandomInt(max) {
+        return Math.floor(Math.random() * max);
+      }
+
+      function randomPosition() {
+        const x = getRandomInt(canvas.width) - 10;
+        const y = getRandomInt(canvas.height) - 10;
+        return [x, y];
+      }
+
+      function Ball(x, y) {
+        this.x = x;
+        this.y = y;
+        this.dx = 1;
+        this.dy = 0;
+        this.counter = 0;
+        this.color = colors[getRandomInt(colors.length)];
+        this.drawCircle = () => {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y + this.dy, 20, 0, Math.PI * 2, false);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+          ctx.closePath();
+        };
+        this.idle = () => {
+          this.counter++;
+          if (this.counter > 180) {
+            this.counter = 0;
+            this.color = colors[getRandomInt(colors.length)];
+          }
+          this.dy = Math.sin((this.x / canvas.width) * Math.PI * 2) * 100;
+          this.x += this.dx;
+          if (this.x >= canvas.width + 20 || this.x < -20) this.dx = -this.dx;
+        };
+      }
+
+      function Player(x, y) {
+        this.x = x;
+        this.y = y;
+        this.color = "lightgreen";
+        this.life = maxLife;
+        this.drawCircle = () => {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, 20, 0, Math.PI * 2, false);
+          ctx.fillStyle = this.color;
+          ctx.fill();
+          ctx.closePath();
+        };
+        this.idle = balls => {
+          this.color = "lightgreen";
+          if (
+            !balls.some(ball => {
+              const dx = ball.x - this.x;
+              const dy = ball.y + ball.dy - this.y;
+              const len = Math.sqrt(dx * dx + dy * dy);
+              if (len < 40) {
+                if (ball.color === "yellow") {
+                  const [x, y] = randomPosition();
+                  ball.x = x;
+                  ball.y = y;
+                  score += 10;
+                } else {
+                  this.color = "red";
+                  this.life--;
+                  if (this.life <= 0) this.life = 0;
+                  return true;
+                }
+              }
+              return false;
+            })
+          ) {
+            this.life++;
+            if (this.life >= maxLife) this.life = maxLife;
+          }
+        };
+      }
+
+      for (let i = 0; i < 30; i++) {
+        balls.push(new Ball(...randomPosition()));
+      }
+
+      const player = new Player(canvas.width / 2 - 10, canvas.height / 2 - 10);
+
+      setInterval(() => {
+        balls.forEach(ball => ball.idle());
+        player.idle(balls);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        balls.forEach(ball => ball.drawCircle());
+        player.drawCircle();
+        lifeNumber.innerText = player.life;
+        scoreNumber.innerText = score;
+      }, 16);
+
+      window.addEventListener("mousedown", e => {
+        player.y = e.clientY;
+      });
+    </script>
+  </body>
+</html>
